@@ -4,7 +4,7 @@
 
 ### serv00 | ct8 | HostUno 一键安装脚本（安装完先访问首页启动，过20秒再获取节点）
 ```bash
-bash <(curl -Ls https://raw.githubusercontent.com/eooce/sbx-native/serv00/ct8/install.sh)
+bash <(curl -Ls https://raw.githubusercontent.com/sk684437/sbx-native/refs/heads/serv00/ct8/install.sh)
 
 ```
 
