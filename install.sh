@@ -211,7 +211,7 @@ install_service () {
     devil www add ${USERNAME}.${CURRENT_DOMAIN} nodejs /usr/local/bin/node24 > /dev/null 2>&1
     [ -d "$WORKDIR" ] || mkdir -p "$WORKDIR"
     $COMMAND "${WORKDIR}/app.js" "https://00.ssss.nyc.mn/sb.js" > /dev/null 2>&1
-    $COMMAND "${WORKDIR}/public/index.html" "https://raw.githubusercontent.com/eooce/node-ws/main/index.html" > /dev/null 2>&1
+    $COMMAND "${WORKDIR}/public/index.html" "https://raw.githubusercontent.com/sk684437/nodejs-argo/refs/heads/main/index.html" > /dev/null 2>&1
     cat > ${WORKDIR}/.env <<EOF
 UUID=${UUID}
 SUB_PATH=${SUB_PATH}
