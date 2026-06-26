@@ -159,15 +159,19 @@ setup_config() {
         yellow "\n========== 检测到已存在的配置文件 =========="
         source "${WORKDIR}/.env"
         green "当前 UUID: ${UUID}"
+        green "当前 订阅路径: ${SUB_PATH}"
         green "当前 哪吒域名: ${NEZHA_SERVER:-未设置}"
         green "当前 Argo域名: ${ARGO_DOMAIN:-未设置}"
         
         reading "\n是否需要修改原配置？(直接回车默认不修改)【y/n】: " modify_choice
         if [[ "$modify_choice" == "y" || "$modify_choice" == "Y" ]]; then
             reading "请输入新的 UUID (直接回车保留原配置: ${UUID}): " new_uuid
-            if [[ -n "$new_uuid" ]]; then
-                export UUID="$new_uuid"
-                export SUB_PATH="${UUID:0:8}"
+            [[ -n "$new_uuid" ]] && export UUID="$new_uuid"
+
+            reading "请输入自定义订阅路径 (例如 sub。直接回车保留原配置: ${SUB_PATH}): " new_sub_path
+            if [[ -n "$new_sub_path" ]]; then
+                # 去除用户可能错误输入的开头斜杠，防止链接变成 //sub
+                export SUB_PATH="${new_sub_path#/}"
             fi
 
             reading "请输入哪吒探针域名或IP (直接回车保留原配置): " new_nz_server
@@ -196,7 +200,14 @@ setup_config() {
     else
         # 初次安装流程
         export UUID=${UUID:-$(uuidgen -r)}
-        export SUB_PATH=${SUB_PATH:-${UUID:0:8}}
+        reading "\n请输入自定义订阅路径 (例如 sub，不要加斜杠。直接回车将基于UUID自动生成): " custom_sub
+        if [[ -n "$custom_sub" ]]; then
+            export SUB_PATH="${custom_sub#/}"
+        else
+            export SUB_PATH="${UUID:0:8}"
+        fi
+        green "你的订阅路径为: ${SUB_PATH}"
+        
         read_variables
         argo_configure
     fi
