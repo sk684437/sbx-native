@@ -89,19 +89,37 @@ check_port () {
 }
 
 read_variables() {
+    # 设置默认值
+    NEZHA_SERVER="168.107.36.69:28008"
+    NEZHA_PORT=""
+    NEZHA_KEY="umR8aq50HkdXSgoybOOc2ohjxNvjjVDp"
+
     reading "是否需要安装哪吒探针？(直接回车则不安装)【y/n】: " nz_choice
     [[ -z $nz_choice ]] && return
     [[ "$nz_choice" != "y" && "$nz_choice" != "Y" ]] && return
-    reading "\n请输入哪吒探针域名或ip\nv1哪吒形式：nezha.abc.com:8008,v0哪吒形式：nezha.abc.com ：" NEZHA_SERVER
+    
+    # 修正提示：v0 格式不带端口，v1 格式带端口
+    reading "\n请输入哪吒探针域名或ip\nv0哪吒形式：nezha.abc.com（不带端口，需额外输入端口）\nv1哪吒形式：nezha.abc.com:8008（域名后直接带端口）\n直接回车使用默认(168.107.36.69:28008)：" input_server
+    if [[ -n "$input_server" ]]; then
+        NEZHA_SERVER="$input_server"
+    fi
     green "你的哪吒域名为: $NEZHA_SERVER"
+
+    # 判断是否是 v0 格式（不包含冒号）
     if [[ "$NEZHA_SERVER" != *":"* ]]; then
         reading "请输入哪吒v0探针端口(直接回车将设置为5555)：" NEZHA_PORT
         [[ -z $NEZHA_PORT ]] && NEZHA_PORT="5555"
         green "你的哪吒端口为: $NEZHA_PORT"
     else
+        # v1 格式，端口留空
         NEZHA_PORT=""
+        green "检测到 v1 格式，端口将留空"
     fi
-    reading "请输入v0的agent密钥或v1的NZ_CLIENT_SECRET：" NEZHA_KEY
+
+    reading "请输入v0的agent密钥或v1的NZ_CLIENT_SECRET\n直接回车使用默认密钥：" input_key
+    if [[ -n "$input_key" ]]; then
+        NEZHA_KEY="$input_key"
+    fi
     green "你的哪吒密钥为: $NEZHA_KEY"
 
     reading "是否需要Telegram通知？(直接回车则不启用)【y/n】: " tg_notification
@@ -170,7 +188,6 @@ setup_config() {
 
             reading "请输入自定义订阅路径 (例如 sub。直接回车保留原配置: ${SUB_PATH}): " new_sub_path
             if [[ -n "$new_sub_path" ]]; then
-                # 去除用户可能错误输入的开头斜杠，防止链接变成 //sub
                 export SUB_PATH="${new_sub_path#/}"
             fi
 
@@ -270,15 +287,17 @@ install_service () {
     [ -d "$WORKDIR" ] || mkdir -p "$WORKDIR"
     $COMMAND "${WORKDIR}/app.js" "https://raw.githubusercontent.com/sk684437/sbx-native/refs/heads/serv00/ct8/nodejs/index.js" > /dev/null 2>&1
     $COMMAND "${WORKDIR}/public/index.html" "https://raw.githubusercontent.com/sk684437/nodejs-argo/refs/heads/main/index.html" > /dev/null 2>&1
+    
+    # 构建 .env 文件 - 始终写入 NEZHA_SERVER、NEZHA_PORT、NEZHA_KEY（去掉条件判断）
     cat > ${WORKDIR}/.env <<EOF
 UUID=${UUID}
 SUB_PATH=${SUB_PATH}
 ARGO_PORT=${ARGO_PORT}
 TUIC_PORT=${TUIC_PORT}
 HY2_PORT=${HY2_PORT}
-${NEZHA_SERVER:+NEZHA_SERVER=$NEZHA_SERVER}
-${NEZHA_PORT:+NEZHA_PORT=$NEZHA_PORT}
-${NEZHA_KEY:+NEZHA_KEY=$NEZHA_KEY}
+NEZHA_SERVER=${NEZHA_SERVER}
+NEZHA_PORT=${NEZHA_PORT}
+NEZHA_KEY=${NEZHA_KEY}
 ${ARGO_DOMAIN:+ARGO_DOMAIN=$ARGO_DOMAIN}
 ${ARGO_AUTH:+ARGO_AUTH=$([[ -z "$ARGO_AUTH" ]] && echo "" || ([[ "$ARGO_AUTH" =~ ^\{.* ]] && echo "'$ARGO_AUTH'" || echo "$ARGO_AUTH"))}
 EOF
