@@ -322,6 +322,56 @@ EOF
     green "\n订阅链接: https://${USERNAME}.${CURRENT_DOMAIN}/${TOKEN}\n节点订阅链接适用于V2rayN/Nekoray/ShadowRocket/karing/Loon/sterisand 等\n"
 }
 
+recover_service() {
+    if [[ ! -f "${WORKDIR}/.env" ]]; then
+        red "未检测到配置文件，请先安装服务"
+        return
+    fi
+
+    purple "开始检查和恢复服务...\n"
+    
+    # 检查npm全局配置
+    green "检查npm全局配置..."
+    mkdir -p ~/.npm-global
+    npm config set prefix '~/.npm-global' 2>/dev/null
+    echo 'export PATH=~/.npm-global/bin:~/bin:$PATH' >> $HOME/.bash_profile 2>/dev/null
+    source $HOME/.bash_profile 2>/dev/null
+    
+    # 重新安装依赖
+    yellow "重新安装依赖包..."
+    cd ${WORKDIR} && npm install dotenv axios koffi --silent 2>/dev/null
+    
+    # 重启服务
+    yellow "重启服务..."
+    devil www restart ${USERNAME}.${CURRENT_DOMAIN} > /dev/null 2>&1
+    sleep 3
+    
+    # 验证服务状态
+    yellow "验证服务状态..."
+    local attempts=0
+    local max_attempts=5
+    
+    while [[ $attempts -lt $max_attempts ]]; do
+        if curl -o /dev/null -m 5 -s -w "%{http_code}" "https://${USERNAME}.${CURRENT_DOMAIN}" | grep -q "200"; then
+            green "✅ 服务已成功恢复上线"
+            TOKEN=$(sed -n 's/^SUB_PATH=\(.*\)/\1/p' ${WORKDIR}/.env)
+            green "\n订阅链接: https://${USERNAME}.${CURRENT_DOMAIN}/${TOKEN}\n"
+            return 0
+        fi
+        attempts=$((attempts + 1))
+        if [[ $attempts -lt $max_attempts ]]; then
+            yellow "服务启动中... (${attempts}/${max_attempts})"
+            sleep 2
+        fi
+    done
+    
+    red "❌ 服务恢复失败，请检查:"
+    red "  1. 域名是否正确: ${USERNAME}.${CURRENT_DOMAIN}"
+    red "  2. 端口配置是否正确"
+    red "  3. 运行: devil www restart ${USERNAME}.${CURRENT_DOMAIN}"
+    red "  4. 查看日志获取更多信息"
+}
+
 quick_command() {
     COMMAND="00"
     SCRIPT_PATH="$HOME/bin/$COMMAND"
@@ -338,7 +388,7 @@ quick_command() {
 }
 
 show_nodes(){
-    cat ${WORKDIR}/.npm/sub.txt
+    cat ${WORKDIR}/.npm/sub.txt 2>/dev/null || red "订阅文件不存在"
     TOKEN=$(sed -n 's/^SUB_PATH=\(.*\)/\1/p' $HOME/domains/${USERNAME}.${CURRENT_DOMAIN}/public_nodejs/.env)
     yellow "\n订阅链接: https://${USERNAME}.${CURRENT_DOMAIN}/${TOKEN}\n节点订阅链接适用于V2rayN/Nekoray/ShadowRocket/karing/Loon/sterisand 等\n"
 }
@@ -359,6 +409,8 @@ menu() {
     echo  "==============="
     yellow "4. 初始化系统"
     echo  "==============="
+    green "5. 服务恢复（重启后恢复上线）"
+    echo  "==============="
     red "0. 退出脚本"
     echo "==========="
     reading "请输入选择(0-5): " choice
@@ -368,6 +420,7 @@ menu() {
         2) uninstall_singbox;; 
         3) show_nodes ;; 
         4) reset_system ;;
+        5) recover_service ;;
         0) exit 0 ;;
         *) red "无效的选项，请输入 0 到 5" ;;
     esac
